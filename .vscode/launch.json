@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Запуск с лог-файлом",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/app", // Путь к вашему готовому бинарнику
+            "args": [
+                "test_logs/${input:pickLogFile}" // Передаем аргументом выбранный файл
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "preLaunchTask": "Build C++ Project" // Имя задачи сборки из tasks.json
+        }
+    ],
+    "inputs": [
+        {
+            "id": "pickLogFile",
+            "type": "pickString",
+            "description": "Выберите файл лога для анализа:",
+            "options": [
+                "app_large.log",
+                "app_small.log"
+            ],
+            "default": "app_small.txt"
+        }
+    ]
+}

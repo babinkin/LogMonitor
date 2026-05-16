@@ -1,0 +1,10 @@
+[2024-01-15 10:10:45] [INFO] [Auth] User logged in
+[2024-01-15 10:10:46] [DEBUG] [Database] Query executed in 15ms
+[2024-01-15 10:10:47] [WARN] [Cache] Cache miss for key: user_123
+[2024-01-15 10:10:48] [ERROR] [API] Request timeout after 30s
+[2024-01-15 10:10:49] [INFO] [Network] Connection estabilished
+[2024-01-15 10:10:50] [ERROR] [Database] Connection pool exhausted
+[2024-01-15 10:10:51] [INFO] [Auth] User logged out
+[2024-01-15 10:10:52] [DEBUG] [Cache] Cache hit for key: config
+[2024-01-15 10:10:53] [WARN] [API] Rate limit approaching
+[2024-01-15 10:10:54] [INFO] [System] Health check passed
