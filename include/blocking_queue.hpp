@@ -1,3 +1,4 @@
+// blocking_queue.hpp - добавьте метод reserve
 #pragma once
 
 #include <condition_variable>
@@ -18,11 +19,12 @@ private:
     size_t max_size_;
     size_t current_size_;
     bool shutdown_; // флаг остановки
+    bool paused_;   // флаг паузы (новый)
 
 public:
     // конструктор с опциональным ограничением размера
     explicit blocking_queue(size_t max_size = std::numeric_limits<size_t>::max())
-        : max_size_(max_size), shutdown_(false) {}
+        : max_size_(max_size), shutdown_(false), paused_(false) {}
 
     ~blocking_queue() = default;
 
@@ -32,6 +34,14 @@ public:
     blocking_queue& operator=(const blocking_queue&) = delete;
     blocking_queue& operator=(blocking_queue&&) = delete;
 
+    // Резервирование памяти для queue_ (если queue поддерживает reserve)
+    void reserve(size_t capacity) {
+        // std::queue не имеет reserve, используем другой подход
+        // Для std::queue мы не можем зарезервировать память, 
+        // но можем использовать std::deque как контейнер по умолчанию
+        // Оставляем как есть, т.к. queue не поддерживает reserve
+    }
+
     // управление жизненным циклом
     void shutdown() noexcept {
         std::lock_guard<std::mutex> lock(mtx_);
@@ -39,6 +49,24 @@ public:
         // разбудить все ожидающие потоки (и потребителей и производителей)
         cv_not_empty_.notify_all();
         cv_not_full_.notify_all();
+    }
+    
+    // Управление паузой
+    void pause() noexcept {
+        std::lock_guard<std::mutex> lock(mtx_);
+        paused_ = true;
+    }
+    
+    void resume() noexcept {
+        std::lock_guard<std::mutex> lock(mtx_);
+        paused_ = false;
+        cv_not_empty_.notify_all();
+        cv_not_full_.notify_all();
+    }
+    
+    bool is_paused() const noexcept {
+        std::lock_guard<std::mutex> lock(mtx_);
+        return paused_;
     }
 
     // проверка флага остановки
@@ -51,9 +79,9 @@ public:
     // блокирующее добавление (ждет, если очередь полна)
     void push(const T& item) {
         std::unique_lock<std::mutex> lock(mtx_);
-        // ждем: очередь полна или запрошена остановка
+        // ждем: очередь полна или запрошена остановка или пауза
         cv_not_full_.wait(lock, [this] {
-            return queue_.size() < max_size_ || shutdown_;
+            return (queue_.size() < max_size_ && !paused_) || shutdown_;
         });
         // если остановка запрошена или очередь полна - не добавляем
         if (shutdown_ && queue_.size() >= max_size_) {
@@ -68,12 +96,12 @@ public:
         std::unique_lock<std::mutex> lock(mtx_);
         // ждем: очередь не пуста или запрошена остановка
         cv_not_empty_.wait(lock, [this] {
-            return !queue_.empty() || shutdown_;
+            return (!queue_.empty() && !paused_) || shutdown_;
         });
 
         // если остановка и очередь пуста - выбрасываем исключение
         if(shutdown_ && queue_.empty()) {
-            throw std::runtime_error("Queue shutdown: no more imets");
+            throw std::runtime_error("Queue shutdown: no more items");
         }
 
         // для безопасности при исключениях используем move_if_noexcept
@@ -88,7 +116,7 @@ public:
     // неблокирующее извлечение
     std::optional<T> try_pop() {
         std::unique_lock<std::mutex> lock(mtx_);
-        if(queue_.empty()) {
+        if(queue_.empty() || paused_) {
             return std::nullopt;
         }
         T value = std::move_if_noexcept(queue_.front());

@@ -11,7 +11,7 @@
 enum class LogLevel {DEBUG, INFO, WARN, ERROR, FATAL};
 
 struct LogEntry {
-std::chrono::system_clock::time_point timestamp;
+    std::chrono::system_clock::time_point timestamp;
     LogLevel level;
     std::string source;
     std::string message;
@@ -47,5 +47,24 @@ std::chrono::system_clock::time_point timestamp;
         entry.message = matches[4].str();
         
         return entry;
+    }
+
+    std::string to_string() const {
+        std::time_t time = std::chrono::system_clock::to_time_t(timestamp);
+        std::tm* tm = std::localtime(&time);
+        std::ostringstream oss;
+        oss << std::put_time(tm, "%Y-%m-%d %H:%M:%S");
+        
+        std::string level_str;
+        switch(level) {
+            case LogLevel::DEBUG: level_str = "DEBUG"; break;
+            case LogLevel::INFO: level_str = "INFO"; break;
+            case LogLevel::WARN: level_str = "WARN"; break;
+            case LogLevel::ERROR: level_str = "ERROR"; break;
+            case LogLevel::FATAL: level_str = "FATAL"; break;
+        }
+        
+        oss << " [" << level_str << "] [" << source << "] " << message;
+        return oss.str();
     }
 };
